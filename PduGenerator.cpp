@@ -1,4 +1,3 @@
-//数据用TTree保存，一个entry包含一个天顶角，一个方位角，以及相应的能量抽样（用数组保存）
 #include "TH1D.h"
 #include "TF1.h"
 #include "TCanvas.h"
@@ -52,19 +51,19 @@ void samplewrite()
 {
     double zenith;
     double azimuth;
-    double energy[100000];
+    double energy;
 
     TFile file("sample.root","recreate");
     TTree* sample=new TTree("sample","a tree with sample");
 
     sample->Branch("zenith",&zenith,"zenith/D");
     sample->Branch("azimuth",&azimuth,"azimuth/D");
-    sample->Branch("energy",energy,"energy[10000]/D");//这里的数字为能量抽样的总数
+    sample->Branch("energy",&energy,"energy/D");
 
-    TF1* model=new TF1("energy-distribution",PduGenerator,1,100,1);//定出抽样函数
+    TF1* model=new TF1("energy-distribution",PduGenerator,1,100,1);//能量抽样函数
 
     TRandom3 r;
-    int n=10000;//entry的总数
+    int n=10000;//entry的总数，产生粒子的总数
     
     //fill the tree
     for(int i=0;i<n;i++)
@@ -76,10 +75,7 @@ void samplewrite()
 
         
         model->SetParameter(0,zenith/180*PI);
-        for(int ii=0;ii<100000;ii++)
-        {
-            energy[ii]=model->GetRandom();
-        }
+        energy=model->GetRandom();
         
         sample->Fill();
     }
@@ -90,20 +86,22 @@ void samplewrite()
 }
 
 
-void angularread()//读出天顶角分布，方位角分布
+void sampleread()//读出天顶角分布，方位角分布
 {
     TFile* file=new TFile("sample.root");
     TTree* sample=(TTree*)file->Get("sample");
     double zenith;
     double azimuth;
+    double energy;
 
     sample->SetBranchAddress("zenith",&zenith);
     sample->SetBranchAddress("azimuth",&azimuth);
+    sample->SetBranchAddress("energy",&energy);
 
     //create three histograms
     TH1D* hiszenith=new TH1D("zenith","zenith",270,0,90);
     TH1D* hisazimuth=new TH1D("azimuth","azimuth",720,0,360);
-
+    TH1D* hisenergy=new TH1D("energy","energy",198,1.,100.);
     //fill the three histograms
     Long64_t nentries=sample->GetEntries();
     for(Long64_t i=0;i<nentries;i++)
@@ -111,39 +109,8 @@ void angularread()//读出天顶角分布，方位角分布
         sample->GetEntry(i);
         hiszenith->Fill(zenith);
         hisazimuth->Fill(azimuth);
+        hisenergy->Fill(energy);
     }
-
-    TCanvas* c1=new TCanvas("c1","c1",600,800);
-    c1->Divide(1,2);
-    c1->cd(1);
-    hisazimuth->Draw("L");
-    c1->cd(2);
-    hiszenith->Draw("L");
-
-    if(gROOT->IsBatch()) return;
-    new TBrowser();
-    sample->StartViewer();
-}
-
-void energyread()//读相应的能量分布，需要给出指定的的entrie数，然后进入读取相应的能量数值(数组），并画图。
-{
-    TFile* file=new TFile("sample.root");
-    TTree* sample=(TTree*)file->Get("sample");
-
-    double num[100000];//数值和上面的能量抽样相应
-
-    sample->SetBranchAddress("energy",num);
-
-    TH1D* hisenergy=new TH1D("energy","energy",198,1.,100.);
-
-    sample->GetEntry(10);//进入相应的entry,要设定进入哪一个entry
-
-    for(int i=0;i<100000;i++)
-    {
-        hisenergy->Fill(num[i]);
-    }
-
-    hisenergy->Draw("P");
 
     if(gROOT->IsBatch()) return;
     new TBrowser();
@@ -153,6 +120,5 @@ void energyread()//读相应的能量分布，需要给出指定的的entrie数�
 void sample()
 {
     samplewrite();
-    angularread();
-    energyread();
+    sampleread();
 }
