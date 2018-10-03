@@ -60,15 +60,14 @@ void samplewrite()
     sample->Branch("azimuth",&azimuth,"azimuth/D");
     sample->Branch("energy",&energy,"energy/D");
 
-    TF1* model=new TF1("energy-distribution",PduGenerator,1,100,1);//能量抽样函数
+    TF1* model=new TF1("energy-distribution",PduGenerator,0.3,100,1);//能量抽样函数
 
     TRandom3 r;
-    int n=10000;//entry的总数，产生粒子的总数
+    int n=100000;//entry的总数，产生粒子的总数
     
     //fill the tree
     for(int i=0;i<n;i++)
     {
-        //角度抽样
         double number=r.Rndm(0);
         zenith=angulardistribution(number);
         azimuth=r.Rndm(0)*360;
@@ -86,7 +85,7 @@ void samplewrite()
 }
 
 
-void sampleread()//读出天顶角分布，方位角分布
+void sampleread()//读出天顶角分布，方位角，能量分布
 {
     TFile* file=new TFile("sample.root");
     TTree* sample=(TTree*)file->Get("sample");
@@ -101,7 +100,7 @@ void sampleread()//读出天顶角分布，方位角分布
     //create three histograms
     TH1D* hiszenith=new TH1D("zenith","zenith",270,0,90);
     TH1D* hisazimuth=new TH1D("azimuth","azimuth",720,0,360);
-    TH1D* hisenergy=new TH1D("energy","energy",198,1.,100.);
+    TH1D* hisenergy=new TH1D("energy","energy",20,0.,100.);
     //fill the three histograms
     Long64_t nentries=sample->GetEntries();
     for(Long64_t i=0;i<nentries;i++)
