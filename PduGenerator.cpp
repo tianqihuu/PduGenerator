@@ -53,27 +53,27 @@ void samplewrite()
     double azimuth;
     double energy;
 
-    TFile file("sample.root","recreate");
+    TFile file("sample75.root","recreate");
     TTree* sample=new TTree("sample","a tree with sample");
 
     sample->Branch("zenith",&zenith,"zenith/D");
     sample->Branch("azimuth",&azimuth,"azimuth/D");
     sample->Branch("energy",&energy,"energy/D");
 
-    TF1* model=new TF1("energy-distribution",PduGenerator,0.3,100,1);//能量抽样函数
+    TF1* model=new TF1("energy-distribution",PduGenerator,1,1000,1);//能量抽样函数
 
     TRandom3 r;
-    int n=200000;//entry的总数，产生粒子的总数
+    int n=20000;//entry的总数，产生粒子的总数
     
     //fill the tree
     for(int i=0;i<n;i++)
     {
         double number=r.Rndm(0);
-        zenith=angulardistribution(number);
+        //zenith=angulardistribution(number);
+        zenith=0;
         azimuth=r.Rndm(0)*360;
-
         
-        model->SetParameter(0,zenith/180*PI);
+        model->SetParameter(0,75/180*PI);
         energy=model->GetRandom();
         
         sample->Fill();
