@@ -1,4 +1,4 @@
-//比较抽样点和实验点，统一积分通量后对比
+//比较抽样点和实验点，积分通量统一为实验的积分通量
 void graph()//读出能量分布概率密度函数
 {
     TFile* file=new TFile("sample75.root");
@@ -23,16 +23,10 @@ void graph()//读出能量分布概率密度函数
     for(int i2=1;i2<=1998;i2++)
     {
         double entry=hisenergy->GetBinContent(i2);
-        y[i2-1]=entry/20000;
+        y[i2-1]=entry;
         x[i2-1]=1.25+(i2-1)*0.5;
     }
 
-    TCanvas* c1=new TCanvas("c1","c1",800,600);
-
-    TGraph* gr1=new TGraph(n,x,y);
-    gr1->SetMarkerColor(2);
-    gr1->SetMarkerSize(0.5);
-    gr1->SetMarkerStyle(20);
     
     //实验数据点
     
@@ -55,7 +49,7 @@ void graph()//读出能量分布概率密度函数
     }
 
     double area=0;//初始化积分通量
-    area=(labx[0]-1)*laby[0]+(1000-labx[28])*laby[28];//首位部分先处理，剩下的取中间值在处理
+    area=(labx[0]-1)*laby[0]+(1000-labx[28])*laby[28];//首尾部分先处理，剩下的取中间值在处理
 
     for (int i4=0;i4<(labn-1);i4++)
     {
@@ -67,23 +61,32 @@ void graph()//读出能量分布概率密度函数
 
     double const1=1/area;//const1为实验中归一化常数
 
-    //归一话的数据点
-    double normx[labn];
-    double normy[labn];
+    //抽样点换算
 
-    for(int i5=0;i5<labn;i5++)
+    double samplex[n];
+    double sampley[n];
+
+    for(int i5=0;i5<=1998;i5++)
     {
-        normx[i5]=labx[i5];
-        normy[i5]=laby[i5]*const1;
+        samplex[i5]=x[i5];
+        sampley[i5]=y[i5]/20000/const1;
     }
-    
-    TGraph* gr2=new TGraph(labn,normx,normy);
+
+
+    TCanvas* c1=new TCanvas("c1","c1",800,600);
+
+    TGraph* gr1=new TGraph(n,samplex,sampley);
+    gr1->SetMarkerColor(2);
+    gr1->SetMarkerSize(0.5);
+    gr1->SetMarkerStyle(20);
+  
+    TGraph* gr2=new TGraph(labn,labx,laby);
     gr2->SetMarkerColor(4);
     gr2->SetMarkerSize(1);
     gr2->SetMarkerStyle(22);
     gr2->GetXaxis()->SetTitle("energy[GEV]");
 
-    gr2->Draw("AP");
+    gr1->Draw("AP");
 
-    gr1->Draw("Psame"); 
+    gr2->Draw("Psame"); 
 }
