@@ -76,7 +76,7 @@ void samplewrite()
         zenith=75;
         azimuth=r.Rndm(0)*360;
         
-        model->SetParameter(0,75/180*PI);
+        model->SetParameter(0,75/180*PI);//固定75度角，进行抽样
         energy=model->GetRandom();
         
         sample->Fill();
