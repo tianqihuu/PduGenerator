@@ -1,92 +1,74 @@
-//比较抽样点和实验点，积分通量统一为实验的积分通量
-void graph()//读出能量分布概率密度函数
+
+void graph()
 {
-    TFile* file=new TFile("sample75.root");
+    TFile* file=new TFile("sample0.root");
     TTree* sample=(TTree*)file->Get("sample");
     double energy;
 
     sample->SetBranchAddress("energy",&energy);
 
-    TH1D* hisenergy=new TH1D("energy","energy",1998,1.,1000.);
+    TH1D* hisenergy=new TH1D("energy","energy",396,1.,100.);
     //fill the three histograms
-    Long64_t nentries=sample->GetEntries();
-    for(Long64_t i=0;i<nentries;i++)
+    int nentries=sample->GetEntries();
+    for(int i=0;i<nentries;i++)
     {
         sample->GetEntry(i);
         hisenergy->Fill(energy);
     }
 
-    const int n=1998;
+    const int n=37;//total number of picture points
 
-    double x[n],y[n];
+    //data with angular is 0
 
-    for(int i2=1;i2<=1998;i2++)
+    double Picturex[n]={1.00,1.23632,1.66974,2.13862,2.57483,3.04569,3.4775,3.97053,4.41483,4.82282,5.26853,5.75542,6.23198,6.62975,7.11553,7.50309,8.02074,8.56686,10.13345,11.2674,12.5282,14.1785,16.1887,18.3213,20.5523,23.2596,27.271,30.8634,35.2391,42.3164,46.3476,51.0803,55.8009,58.8401,61.4989,66.0051,100.00};
+    //Picture[y]的点在扣点的基础上乘以5E5；
+    double Picturey[n]={205.908,200.806,164.731,141.429,121.905,97.5545,82.0311,68.9779,58.0017,51.2481,44.1734,36.236,33.642,28.9978,26.922,23.2055,18.7697,17.2409,12.4961,10.0,8.20311,6.404,4.64159,3.44853,2.62636,1.85702,1.21905,0.883561,0.580017,0.36236,0.256214,0.190357,0.152334,0.121905,0.107711,0.0883561,0.02};
+
+
+    //transform to lab point
+    double x[n];
+    double y[n];
+
+    for(int i0=0;i0<n;i0++)
     {
-        double entry=hisenergy->GetBinContent(i2);
-        y[i2-1]=entry;
-        x[i2-1]=1.25+(i2-1)*0.5;
+        x[i0]=Picturex[i0];
+        y[i0]=Picturey[i0]/100000;
     }
 
+    double area=0;  //intergrated flux
+
+
+    for(int i1=0;i1<n;i1++)
+    {
+        area+=(x[i1+1]-x[i1])*(y[i1]+y[i1+1])/2;
+    }
+
+    //normalized const
+
+    double constant=1/area;
+
+    printf("area:%f,constant:%f\n",area,constant);
+
+    //normalized
+
+    double nx[n];
+    double ny[n];
+
+    for(int i2=0;i2<n;i2++)
+    {
+        nx[i2]=x[i2];
+        ny[i2]=y[i2]*constant;
+    }
+
+    TCanvas* c1=new TCanvas("c1","Contrast",800,600);
+    //hisenergy->DrawNormalized();
+
+    TGraph* gr=new TGraph(n,nx,ny);
+    gr->SetMarkerColor(2);
+    gr->SetMarkerSize(0.5);
+    gr->SetMarkerStyle(20);
     
-    //实验数据点
     
-    //75度角，采样29个点
-    const int labn=29;
+    gr->Draw();
 
-    //diff-intensity所有数据乘以1E7
-    double px[labn]={1.11571,1.38884,1.72863,2.28449,3.84378,3.5399,4.45056,5.65147,7.10534,8.93327,11.3473,14.2619,17.7533,22.5437,28.0625,35.2818,44.8019,55.7696,70.8181,88.1546,110.833,140.739,176.945,222.465,279.696,355.167,451.002,620.165,990.096};
-    double py[labn]={297.148,306.54,326.222,316.228,306.54,297.22,262.373,231.667,204.555,169.719,136.501,106.421,82.9696,57.159,39.3183,25.4335,17.5083,10.6421,6.46861,3.6946,2.1769,1.24335,0.667305,0.381173,0.192213,0.0939665,0.0536698,0.0175083,0.00393183};
-
-    //转换回实验数据点
-    double labx[labn];
-    double laby[labn];
-
-    double multiple=pow(10,7);
-    for(int i3=0;i3<labn;i3++)
-    {
-        labx[i3]=px[i3];
-        laby[i3]=py[i3]/multiple;
-    }
-
-    double area=0;//初始化积分通量
-    area=(labx[0]-1)*laby[0]+(1000-labx[28])*laby[28];//首尾部分先处理，剩下的取中间值在处理
-
-    for (int i4=0;i4<(labn-1);i4++)
-    {
-        area=area+((laby[i4]+laby[i4+1])/2)*(labx[i4+1]-labx[i4]);
-
-    }
-
-    //得到的积分归一化
-
-    double const1=1/area;//const1为实验中归一化常数
-
-    //抽样点换算
-
-    double samplex[n];
-    double sampley[n];
-
-    for(int i5=0;i5<=1998;i5++)
-    {
-        samplex[i5]=x[i5];
-        sampley[i5]=y[i5]/20000/const1;
-    }
-
-
-    TCanvas* c1=new TCanvas("c1","c1",800,600);
-
-    TGraph* gr1=new TGraph(n,samplex,sampley);
-    gr1->SetMarkerColor(2);
-    gr1->SetMarkerSize(0.5);
-    gr1->SetMarkerStyle(20);
-  
-    TGraph* gr2=new TGraph(labn,labx,laby);
-    gr2->SetMarkerColor(4);
-    gr2->SetMarkerSize(1);
-    gr2->SetMarkerStyle(22);
-    gr2->GetXaxis()->SetTitle("energy[GEV]");
-
-    gr1->Draw("AP");
-
-    gr2->Draw("Psame"); 
 }
