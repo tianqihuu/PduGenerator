@@ -2,11 +2,12 @@
 #include "TF1.h"
 #include "TCanvas.h"
 #include "TFile.h"
-#include "TRandom.h"
+#include "TRandom3.h"
+#include "TMath.h"
 
-#define PI 3.1415926
 
-double PduGenerator(double* x,double* par)
+
+double PduModel(double* x,double* par)
 {
     using namespace TMath;
     double Emu = x[0]; // Unit: GeV
@@ -38,46 +39,65 @@ double PduGenerator(double* x,double* par)
     return (numerator/denominator);
 }
 
-double angulardistribution(double U)//此函数接收随机数，并返回theta值
+double GetTheta()//get one zenith value
 {
-    double result1;//1-随机数的值
-    double result2;//result开立方
-    double result3;
+    using namespace TMath;//Inverse transform
 
-    result1=1-U;
-    result2=pow(result1,1.0/3);
-    result3=acos(result2)*180/PI;
-    return result3;
+    double num1;
+    double num2;
+    double theta;
+
+    TRandom3 r(0);
+
+    num1=1-r.Rndm();
+    num2=pow(num1,1.0/3);
+    theta=acos(num2)*180/TMath::Pi();
+   
+    return theta;
 }
 
-void samplewrite()
+double GetPhi()//get one azimuth value
+{
+    using namespace TMath;
+
+    TRandom3 r(0);
+    double azimuth;
+    azimuth=r.Rndm()*360/TMath::Pi()/2.;
+    
+    return azimuth;
+}
+
+void write()
 {
     double zenith;
     double azimuth;
     double energy;
 
-    TFile file("sample75.root","recreate");
+    TFile file("sample0.root","recreate");
     TTree* sample=new TTree("sample","a tree with sample");
 
     sample->Branch("zenith",&zenith,"zenith/D");
     sample->Branch("azimuth",&azimuth,"azimuth/D");
     sample->Branch("energy",&energy,"energy/D");
 
-    TF1* model=new TF1("energy-distribution",PduGenerator,1,1000,1);//能量抽样函数
+    double fEmin=1;
+    double fEmax=100;
+    double fTheta=0.00/180*TMath::Pi();
 
-    TRandom3 r;
-    int n=20000;//entry的总数，产生粒子的总数
+    TF1* fPduModel = new TF1("pdu", PduModel, fEmin, fEmax, 1);
+    fPduModel->SetParameter(0,fTheta);
+
+    int n=100000;//total number of particle
     
     //fill the tree
     for(int i=0;i<n;i++)
     {
-        double number=r.Rndm(0);
-        //zenith=angulardistribution(number);
-        zenith=75;
-        azimuth=r.Rndm(0)*360;
+        zenith=GetTheta();
+        azimuth=GetPhi();
         
-        model->SetParameter(0,75/180*PI);//固定75度角，进行抽样
-        energy=model->GetRandom();
+        //fTheta=zenith/180*TMath::Pi();
+        //fPduModel->SetParameter(0,fTheta);
+        energy=fPduModel->GetRandom();
         
         sample->Fill();
     }
@@ -88,39 +108,41 @@ void samplewrite()
 }
 
 
-void sampleread()//读出天顶角分布，方位角，能量分布
+
+
+void John_Leong()
 {
-    TFile* file=new TFile("sample.root");
-    TTree* sample=(TTree*)file->Get("sample");
-    double zenith;
-    double azimuth;
-    double energy;
+    double fEmin=1;
+    double fEmax=100;
+    double fTheta=30/180*TMath::Pi();
 
-    sample->SetBranchAddress("zenith",&zenith);
-    sample->SetBranchAddress("azimuth",&azimuth);
-    sample->SetBranchAddress("energy",&energy);
+    TF1* f1_Test = new TF1("pdu", PduModel, fEmin, fEmax, 1);
+    f1_Test -> SetParameter(0, fTheta);
 
-    //create three histograms
-    TH1D* hiszenith=new TH1D("zenith","zenith",270,0,90);
-    TH1D* hisazimuth=new TH1D("azimuth","azimuth",720,0,360);
-    TH1D* hisenergy=new TH1D("energy","energy",200,0.,100.);
-    //fill the three histograms
-    Long64_t nentries=sample->GetEntries();
-    for(Long64_t i=0;i<nentries;i++)
+
+    auto h = new TH1D("h", "h", 500, fEmin, fEmax);
+
+    for(int i = 0; i < 10000; i++)
     {
-        sample->GetEntry(i);
-        hiszenith->Fill(zenith);
-        hisazimuth->Fill(azimuth);
-        hisenergy->Fill(energy);
+        double y = f1_Test -> GetRandom();
+        h -> Fill(y);
     }
 
-    if(gROOT->IsBatch()) return;
-    new TBrowser();
-    sample->StartViewer();
-}
+    auto c = new TCanvas("c1", "c1", 1);
 
-void sample()
-{
-    samplewrite();
-    sampleread();
+    c -> cd();
+    // h -> DrawNormalized();
+    f1_Test -> Draw("");
+    cout << "Test 1: " << f1_Test -> GetParameter(0) << endl;
+
+    TF1* f2_Test = new TF1("pdu2", PduModel, fEmin, fEmax, 1);
+
+    f2_Test -> FixParameter(0, 1);
+    // f2_Test -> FixParameter(0, 90/180*TMath::Pi());
+    cout << "Test 2: " << f2_Test -> GetParameter(0) << endl;
+    f2_Test -> SetLineColor(kBlue);
+
+    // f2_Test -> Draw("same");
+
+    c -> BuildLegend();
 }
